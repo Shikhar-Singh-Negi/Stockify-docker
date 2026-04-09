@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "69d0c28112e0fe6ef76c998e",
+    "product": {
+      "_id": "69d0bcdbfa08597b7ac169a1",
+      "name": "BoAt Rockerz 450",
+      "Desciption": "On-ear wireless headphones with long battery life.",
+      "Category": "69d0bcdbfa08597b7ac1699e",
+      "Price": 1499,
+      "quantity": 50,
+      "supplier": "69d0bcdbfa08597b7ac1698d",
+      "createdAt": "2026-04-04T07:25:15.250Z",
+      "updatedAt": "2026-04-04T07:25:15.250Z",
+      "__v": 0
+    },
+    "type": "Stock-out",
+    "quantity": 50,
+    "supplier": {
+      "_id": "69d0bcdbfa08597b7ac1698d",
+      "name": "Bharat Distributors",
+      "createdAt": "2026-04-04T07:25:15.214Z",
+      "updatedAt": "2026-04-04T07:25:15.214Z",
+      "__v": 0
+    },
+    "transactionDate": "2026-04-04T07:49:21.509Z",
+    "createdAt": "2026-04-04T07:49:21.510Z",
+    "updatedAt": "2026-04-04T07:49:21.510Z",
+    "__v": 0
+  },
+  {
+    "_id": "69d0c8901b0e6cb67857cae5",
+    "product": {
+      "_id": "69d0c86d1b0e6cb67857cac0",
+      "name": "Jim-jam",
+      "Desciption": "Biscuit",
+      "Category": "69d0bcdbfa08597b7ac16990",
+      "Price": 10,
+      "quantity": 0,
+      "createdAt": "2026-04-04T08:14:37.278Z",
+      "updatedAt": "2026-04-04T08:14:37.278Z",
+      "__v": 0
+    },
+    "type": "Stock-out",
+    "quantity": 50,
+    "supplier": {
+      "contactInfo": {
+        "phone": "+91 1122334455",
+        "email": "info@bharatwholesale.in",
+        "address": "Okhla Industrial Area, Delhi"
+      },
+      "_id": "69d0be4d634448e75b698d02",
+      "name": "Bharat Wholesale",
+      "createdAt": "2026-04-04T07:31:25.998Z",
+      "updatedAt": "2026-04-04T07:31:25.998Z",
+      "__v": 0
+    },
+    "transactionDate": "2026-04-04T08:15:12.013Z",
+    "createdAt": "2026-04-04T08:15:12.014Z",
+    "updatedAt": "2026-04-04T08:15:12.014Z",
+    "__v": 0
+  }
+]

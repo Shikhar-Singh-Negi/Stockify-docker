@@ -1,0 +1,313 @@
+const User=require('../models/Usermodel')
+const bcrypt = require("bcryptjs");
+const generateToken=require('../libs/Tokengenerator')
+const Cloundinary=require('../libs/Cloundinary') 
+const logActivity = require('../libs/logger');
+
+
+
+module.exports.signup = async (req, res) => {
+  try {
+    const { name, email, password, ProfilePic } = req.body;
+    const role = "staff"; // Enforce staff role for all new signups
+
+
+  
+    const duplicatedUser = await User.findOne({ email });
+    if (duplicatedUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+
+    const hashedpassword = await bcrypt.hash(password, 10);
+
+
+
+
+
+    const newUser = new User({
+      name,
+      email,
+      password: hashedpassword,
+      ProfilePic:"",
+      role,
+    });
+
+
+    const savedUser = await newUser.save();
+    const token = await generateToken(savedUser, res);
+
+   
+   
+
+
+    res.status(201).json({
+      message: "Signup successful. Please wait for an admin or manager to approve your account.",
+      savedUser: {
+        id: savedUser._id,
+        name: savedUser.name,
+        email: savedUser.email,
+        role: savedUser.role,
+        ProfilePic: savedUser.ProfilePic,
+      },
+    });
+
+    await logActivity({
+      action: "User Signup",
+      description: `User ${name} signed up.`,
+      entity: "user",
+      entityId: savedUser._id,
+      userId: savedUser._id,
+      ipAddress: req.ip,
+    });
+
+
+  } catch (error) {
+    console.error("Error during signup:", error.message);
+    res.status(400).json({ error: "Error during signup: " + error.message });
+  }
+};
+
+
+
+module.exports.login=async(req,res)=>{
+    try {
+        
+     const {email,password}=req.body;
+     const ipAddress = req.ip; 
+     const duplicatedUser=await User.findOne({email})
+
+     if(!duplicatedUser){
+
+   return res.status(400).json({error:"No user found"})
+     }
+
+
+     const hasedpassword=await bcrypt.compare(password,duplicatedUser.password)
+
+
+      if(!hasedpassword){
+            return res.status(400).json({message:'Invalid credentials'})
+        }
+
+        if (!duplicatedUser.isApproved && duplicatedUser.role !== 'admin' && duplicatedUser.role !== 'manager') {
+            return res.status(400).json({message: 'Your account is pending approval.'});
+        }
+
+        const token=await generateToken(duplicatedUser,res)
+
+
+
+
+
+ await logActivity({
+      action: "User Login",
+      description: `User ${duplicatedUser.name} logged in.`,
+      entity: "user",
+      entityId: duplicatedUser._id,
+      userId: duplicatedUser._id, 
+      ipAddress: ipAddress,
+    });
+   return res.status(201).json({
+    message:"login successfully",
+    user:{
+        id:duplicatedUser.id,
+        name:duplicatedUser.name,
+        email:duplicatedUser.email,
+        role:duplicatedUser.role,
+        ProfilePic:duplicatedUser.ProfilePic,
+        token
+
+    }
+
+   })
+
+
+    } catch (error) {
+        console.error("Error in login Controller:", error.message);
+        res.status(500).json({
+            error: "Error in login: " + error.message
+        });
+    }
+}
+
+module.exports.logout=async(req,res)=>{
+  try {
+     res.cookie("Inventorymanagmentsystem",'',{maxAge:0})
+       res.status(200).json({message:"Logged out successfully"})
+
+  } catch (error) {
+     res.status(500).json({
+      message: 'An error occurred during logout. Please try again.',
+      error: error.message,
+    });
+    
+  }
+}
+
+
+module.exports.updateProfile = async (req, res) => {
+  try {
+    const { ProfilePic } = req.body;
+    const userId = req.user?._id;
+    const ipAddress = req.ip; 
+
+    if (!userId) {
+      return res.status(400).json({ message: "User not authenticated" });
+    }
+
+    if (ProfilePic) {
+      try {
+       
+        const uploadResponse = await Cloundinary.uploader.upload(ProfilePic, {
+          folder: "profile_inventory_system", 
+          upload_preset: "upload", 
+        });
+
+        const updatedUser = await User.findOneAndUpdate(
+          { _id: userId },
+          { ProfilePic: uploadResponse.secure_url },
+          { new: true }
+        );
+
+        if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        return res.status(200).json({
+          message: "Profile updated successfully",
+          updatedUser
+        });
+        
+
+      } catch (cloudinaryError) {
+        console.error("Cloudinary upload failed:", cloudinaryError);
+        return res.status(500).json({ message: "Image upload failed", error: cloudinaryError.message });
+      }
+    } else {
+      return res.status(400).json({ message: "No profile picture provided" });
+    }
+  } catch (error) {
+    console.error("Error in update profile Controller", error.message);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+
+module.exports.staffuser = async (req, res) => {
+  try {
+    const staffuser = await User.find({ role: "staff" }).select("-password");
+
+    if (staffuser.length === 0) {
+      return res.status(200).json({ message: "There are no staff users available." });
+    }
+
+    res.status(200).json(staffuser);
+  } catch (error) {
+    console.log("Error in get staff Controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+module.exports.pendingusers = async (req, res) => {
+  try {
+    const pendingUsers = await User.find({ isApproved: false }).select("-password").sort({ createdAt: -1 });
+    res.status(200).json(pendingUsers);
+  } catch (error) {
+    console.log("Error in get pending users Controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+module.exports.manageruser = async (req, res) => {
+  try {
+    const manageruser = await User.find({ role: "manager" }).select("-password");
+
+    if (manageruser.length === 0) {
+      return res.status(200).json({ message: "There are no manager users available." });
+    }
+
+    res.status(200).json(manageruser);
+  } catch (error) {
+    console.log("Error in get manager Controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+};
+
+module.exports.adminuser = async (req, res) => {
+  try {
+    const adminuser = await User.find({ role: "admin" }).select("-password");
+
+    if (adminuser.length === 0) {
+      return res.status(200).json({ message: "There are no admin users available." });
+    }
+
+    res.status(200).json(adminuser);
+  } catch (error) {
+    console.log("Error in get admin Controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error", error });
+  }
+}
+
+
+
+module.exports.removeuser = async (req, res) => {
+  try {
+    const { UserId } = req.params;
+
+    if (!UserId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const deleteUser = await User.findByIdAndDelete(UserId);
+
+    if (!deleteUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+module.exports.approveuser = async (req, res) => {
+  try {
+    if (req.user.role === 'staff') {
+        return res.status(403).json({ message: "Access denied. Admin or manager required." });
+    }
+    const { UserId } = req.params;
+    const userToApprove = await User.findByIdAndUpdate(UserId, { isApproved: true }, { new: true });
+    if (!userToApprove) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "User approved successfully", user: userToApprove });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+module.exports.makemanager = async (req, res) => {
+  try {
+    const { UserId } = req.params;
+    const userPromoted = await User.findByIdAndUpdate(UserId, { role: "manager" }, { new: true });
+    if (!userPromoted) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: "User elevated to manager", user: userPromoted });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+module.exports.changeRole = async (req, res) => {
+  try {
+    const { UserId } = req.params;
+    const { role } = req.body;
+    if (!['admin', 'manager', 'staff'].includes(role)) {
+      return res.status(400).json({ message: "Invalid role provided" });
+    }
+    const updatedUser = await User.findByIdAndUpdate(UserId, { role }, { new: true });
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({ message: `User role updated to ${role}`, user: updatedUser });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
