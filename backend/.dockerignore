@@ -7,3 +7,6 @@ out.json
 out.txt
 .gitignore
 README.md
+.git
+Dockerfile
+docker-compose.yml

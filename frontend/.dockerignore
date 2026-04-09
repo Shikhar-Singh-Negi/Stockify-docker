@@ -7,3 +7,6 @@ build
 .gitignore
 README.md
 fix_imports.js
+.git
+Dockerfile
+docker-compose.yml
